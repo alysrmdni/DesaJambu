@@ -1,0 +1,404 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Peta Desa Jambu</title>
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+    crossorigin=""
+  >
+  <style>
+    html, body {
+      margin: 0;
+      height: 100%;
+      font-family: Arial, sans-serif;
+      color: #1f2937;
+      background: #f6f7fb;
+    }
+    header {
+      padding: 16px 20px;
+      background: #1f2937;
+      color: #f8fafc;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+    }
+    main {
+      padding: 16px 20px 20px;
+    }
+    .layout {
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: 14px;
+    }
+    #map {
+      height: 72vh;
+      border-radius: 14px;
+      overflow: hidden;
+      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
+      border: 1px solid #d9e2ec;
+      background: #fff;
+    }
+    .card {
+      background: linear-gradient(165deg, #f8fafc 0%, #ffffff 55%, #eef2f7 100%);
+      border: 1px solid #d9e2ec;
+      border-radius: 14px;
+      padding: 14px 16px;
+      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.10);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .search-box {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .search-box label {
+      font-weight: 600;
+      font-size: 13px;
+      color: #1f2937;
+    }
+    .search-box form {
+      display: flex;
+      gap: 8px;
+    }
+    .search-box input {
+      flex: 1;
+      padding: 10px 12px;
+      border: 1px solid #cbd5e1;
+      border-radius: 10px;
+      font-size: 14px;
+      background: #fff;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .search-box input:focus {
+      outline: none;
+      border-color: #2563eb;
+      box-shadow: 0 0 0 3px #2563eb33;
+    }
+    .search-box button {
+      padding: 10px 14px;
+      border: none;
+      border-radius: 10px;
+      background: #2563eb;
+      color: #fff;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.1s, box-shadow 0.2s;
+    }
+    .search-box button:hover {
+      box-shadow: 0 6px 14px rgba(37, 99, 235, 0.2);
+      transform: translateY(-1px);
+    }
+    .search-box button:active {
+      transform: translateY(0);
+    }
+    .search-hint {
+      font-size: 12px;
+      color: #64748b;
+    }
+    .card h2 {
+      margin: 0;
+      font-size: 18px;
+      color: #0f172a;
+    }
+    .legend {
+      background: #fff;
+      padding: 10px 12px;
+      border-radius: 10px;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+      font-size: 14px;
+      line-height: 1.4;
+      border: 1px solid #d9e2ec;
+    }
+    .legend strong {
+      color: #2563eb;
+    }
+    .note {
+      font-size: 13px;
+      color: #475569;
+      line-height: 1.45;
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: #2563eb12;
+      color: #1e3a8a;
+      border: 1px solid #2563eb30;
+      border-radius: 20px;
+      padding: 6px 10px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .tips {
+      font-size: 13px;
+      color: #334155;
+      line-height: 1.5;
+    }
+    .tips li {
+      margin-bottom: 4px;
+    }
+    @media (max-width: 900px) {
+      .layout {
+        grid-template-columns: 1fr;
+      }
+      #map {
+        height: 60vh;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1 style="margin:0;">Pemetaan Desa Jambu</h1>
+    <div style="font-size:14px;opacity:0.9;">Menampilkan batas perkiraan desa dan titik fasilitas umum</div>
+  </header>
+  <main>
+    <div class="layout">
+      <div id="map"></div>
+      <div class="card">
+        <div class="badge">Desa Jambu · Peta Fasilitas</div>
+        <h2>Informasi</h2>
+          <div class="search-box">
+            <label for="searchInput">Cari fasilitas</label>
+            <form id="searchForm">
+              <input id="searchInput" type="text" placeholder="Misal: Masjid, SD, Puskesmas" />
+              <button id="searchBtn" type="submit">Cari</button>
+            </form>
+            <div class="search-hint">Cari berdasarkan nama atau kategori fasilitas.</div>
+          </div>
+        <div class="legend" id="legend"></div>
+        <div class="note">
+          Batas diambil dari <code>desa_jambu.geojson</code> (centroid dan kotak pembatas
+          perkiraan, bukan batas administratif resmi). Koordinat fasilitas bersifat contoh,
+          mohon ganti dengan data lapangan untuk akurasi.
+        </div>
+        <div class="tips">
+          <strong>Tips:</strong>
+          <ul>
+            <li>Klik marker untuk detail fasilitas.</li>
+            <li>Scroll/zoom untuk memperbesar area.</li>
+            <li>Gunakan data GPS lapangan untuk pembaruan.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+    crossorigin=""
+  ></script>
+  <script>
+    // Konfigurasi fasilitas umum (contoh). Ganti koordinat sesuai data lapangan.
+    const facilities = [
+      { name: 'SD Negeri Jambu 01', type: 'Sekolah', coords: [-6.5165, 110.6925] },
+      { name: 'SMP Muhammadiyah Jambu', type: 'Sekolah', coords: [-6.5212, 110.6950] },
+      { name: 'Masjid Al Hidayah', type: 'Masjid', coords: [-6.5189, 110.6885] },
+      { name: 'Masjid Jami Baiturrahman', type: 'Masjid', coords: [-6.5230, 110.6975] },
+      { name: 'Puskesmas Pembantu Jambu', type: 'Kesehatan', coords: [-6.5155, 110.6985] },
+      { name: 'Posyandu Melati', type: 'Kesehatan', coords: [-6.5205, 110.6905] },
+      { name: 'Kantor Desa Jambu', type: 'Kantor Desa', coords: [-6.5180, 110.6940] },
+      { name: 'Balai Desa Jambu', type: 'Balai Desa', coords: [-6.5172, 110.6965] },
+      { name: 'Pasar Desa Jambu', type: 'Pasar', coords: [-6.5218, 110.6915] },
+      { name: 'Lapangan Desa', type: 'Lapangan', coords: [-6.5145, 110.6935] },
+      { name: 'ATM/Bank Unit Desa', type: 'ATM/Bank', coords: [-6.5225, 110.6895] },
+      { name: 'SPBU Mini Jambu', type: 'SPBU', coords: [-6.5240, 110.6945] }
+    ];
+
+    // GeoJSON fallback (dipakai jika fetch gagal, mis. dibuka via file://).
+    const fallbackGeojson = {
+      "type": "FeatureCollection",
+      "features": [
+        {
+          "type": "Feature",
+          "properties": {
+            "name": "Desa Jambu (centroid)",
+            "source": "Wikipedia (id)",
+            "note": "Centroid coordinate from id.wikipedia.org; use official boundary data for precise polygons."
+          },
+          "geometry": {
+            "type": "Point",
+            "coordinates": [110.6925, -6.51889]
+          }
+        },
+        // Tidak ada batas perkiraan; hanya centroid di fallback.
+      ]
+    };
+
+    // Mapping jenis fasilitas ke warna marker.
+    const typeColors = {
+      'Sekolah': '#2563eb',
+      'Masjid': '#16a34a',
+      'Kesehatan': '#dc2626',
+      'Kantor Desa': '#0ea5e9',
+      'Balai Desa': '#f59e0b',
+      'Pasar': '#ea580c',
+      'Lapangan': '#22c55e',
+      'ATM/Bank': '#8b5cf6',
+      'SPBU': '#ef4444',
+      'Lainnya': '#7c3aed'
+    };
+
+    // Utility membuat icon bulat sederhana.
+    const makeIcon = (color) => L.divIcon({
+      className: '',
+      html: `
+        <div style="
+          background:${color};
+          width:14px;
+          height:14px;
+          border-radius:50%;
+          border:2px solid #fff;
+          box-shadow:0 0 4px rgba(0,0,0,0.35);
+        "></div>
+      `,
+      iconSize: [14, 14],
+      iconAnchor: [7, 7],
+      popupAnchor: [0, -6]
+    });
+
+    const map = L.map('map', { zoomControl: false }).setView([-6.51889, 110.6925], 14);
+
+    L.control.zoom({ position: 'topright' }).addTo(map);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '&copy; OpenStreetMap kontributor'
+    }).addTo(map);
+
+    // Layer groups & kontrol layer.
+    const facilitiesLayer = L.layerGroup().addTo(map);
+    const centroidLayer = L.layerGroup().addTo(map);
+    const overlays = {
+      'Centroid Desa': centroidLayer,
+      'Fasilitas': facilitiesLayer
+    };
+    L.control.layers(null, overlays, { position: 'topright', collapsed: false }).addTo(map);
+
+    const renderGeojson = (geojson) => {
+      const commonOptions = {
+        pointToLayer: (feature, latlng) => {
+          if (feature.properties?.name?.includes('centroid')) {
+            return L.circleMarker(latlng, {
+              radius: 6,
+              color: '#1d4ed8',
+              weight: 2,
+              fillColor: '#bfdbfe',
+              fillOpacity: 0.9
+            });
+          }
+          return L.circleMarker(latlng, {
+            radius: 5,
+            color: '#0f766e',
+            weight: 2,
+            fillColor: '#99f6e4',
+            fillOpacity: 0.9
+          });
+        },
+        onEachFeature: (feature, layerItem) => {
+          const name = feature.properties?.name || 'Fitur';
+          const source = feature.properties?.source;
+          const note = feature.properties?.note;
+          const popup = `
+            <strong>${name}</strong><br>
+            ${source ? `Sumber: ${source}<br>` : ''}
+            ${note ? `<small>${note}</small>` : ''}
+          `;
+          layerItem.bindPopup(popup);
+        }
+      };
+
+      L.geoJSON(geojson, {
+        ...commonOptions,
+        filter: (f) => f.properties?.name?.includes('centroid')
+      }).addTo(centroidLayer);
+
+      try {
+        map.fitBounds(centroidLayer.getBounds(), { padding: [32, 32] });
+      } catch (e) {
+        // Abaikan jika bounds tidak bisa dihitung.
+      }
+    };
+
+    // Muat GeoJSON desa dengan fallback ketika dibuka via file://
+    fetch('desa_jambu.geojson')
+      .then((res) => res.json())
+      .then((geojson) => renderGeojson(geojson))
+      .catch((err) => {
+        console.warn('Memakai fallback GeoJSON karena gagal fetch:', err);
+        renderGeojson(fallbackGeojson);
+      });
+
+    // Tambahkan marker fasilitas.
+    const facilityMarkers = facilities.map((item) => {
+      const color = typeColors[item.type] || typeColors['Lainnya'];
+      const marker = L.marker(item.coords, { icon: makeIcon(color) })
+        .addTo(facilitiesLayer)
+        .bindPopup(`
+          <strong>${item.name}</strong><br>
+          Jenis: ${item.type}
+        `);
+      return { item, marker };
+    });
+
+    // Bangun legend dinamis.
+    const legend = document.getElementById('legend');
+    const uniqueTypes = [...new Set(facilities.map(f => f.type))];
+    legend.innerHTML = `
+      <strong>Legenda</strong><br>
+      ${uniqueTypes.map(t => `
+        <span style="
+          display:inline-block;
+          width:12px;
+          height:12px;
+          border-radius:50%;
+          background:${typeColors[t] || typeColors['Lainnya']};
+          margin-right:6px;
+          border:1px solid #e5e7eb;
+        "></span>${t}
+      `).join('<br>')}
+      <br>
+      <span style="
+        display:inline-block;
+        width:16px;
+        height:16px;
+        border-radius:50%;
+        background:#bfdbfe;
+        border:2px solid #1d4ed8;
+        margin-right:6px;
+      "></span>Centroid Desa
+    `;
+
+    // Fitur pencarian fasilitas.
+    const searchForm = document.getElementById('searchForm');
+    const searchInput = document.getElementById('searchInput');
+    const runSearch = () => {
+      const q = searchInput.value.trim().toLowerCase();
+      if (!q) {
+        alert('Masukkan nama atau kategori fasilitas.');
+        return;
+      }
+      const matches = facilityMarkers.filter(({ item }) =>
+        item.name.toLowerCase().includes(q) || item.type.toLowerCase().includes(q)
+      );
+      if (!matches.length) {
+        alert('Fasilitas tidak ditemukan.');
+        return;
+      }
+      const target = matches[0].marker;
+      map.setView(target.getLatLng(), 16);
+      target.openPopup();
+    };
+    searchForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      runSearch();
+    });
+  </script>
+</body>
+</html>
+

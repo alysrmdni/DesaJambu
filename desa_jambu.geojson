@@ -1,0 +1,20 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Desa Jambu (centroid)",
+        "source": "Wikipedia (id)",
+        "note": "Centroid coordinate from id.wikipedia.org; use official boundary data for precise polygons."
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          110.6925,
+          -6.51889
+        ]
+      }
+    }
+  ]
+}
